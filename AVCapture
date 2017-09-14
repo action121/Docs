@@ -3,24 +3,23 @@
 
 思路：
 
-1、弄个view，塞个AVCaptureVideoPreviewLayer进去，用来输出镜头图像；
-2、这个view上盖一个背景不透明的view（或其他方式），用户看不到镜头输出即可。
-3、
-通过
-AVCaptureVideoDataOutputSampleBufferDelegate
-的
-- (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection
-方法输出图片资源，这个时候稍加处理就可以把图片搞到手了。不要每次输出资源数据时都构造一个图片。
-
-
-
-
+使用AVFoundation框架
 需要用到：
 
 AVCaptureSession
 AVCaptureDevice
 AVCaptureDeviceInput
 AVCaptureVideoDataOutput<AVCaptureVideoDataOutputSampleBufferDelegate>
+
+通过
+AVCaptureVideoDataOutputSampleBufferDelegate
+的
+- (void)captureOutput:(AVCaptureOutput *)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection
+方法输出图片资源，这个时候稍加处理就可以把图片搞到手了。
+
+
+
+
 
 
 代码片段：
@@ -74,5 +73,5 @@ didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
 
 
 
-满足老板需求时，尽量道德点：图像输出的代理回调时，图片不要频繁构造。
+满足老板需求时，尽量道德点：图像输出的代理回调时，图片不要频繁构造，拍完就停掉。
 
