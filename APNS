@@ -1,0 +1,37 @@
+微信APP，锁屏时候出现一大堆推送消息，然后在MAC版微信上看过消息后，手机推送消息又从锁屏上消失了。
+以前只是推测了一下微信使用了APNS的静默推送，没做实验。
+今天空闲，实验证明推测是对的。
+
+
+
+
+{
+  //静默推送的消息体
+    aps =     {
+        alert = "";
+        "content-available" = 1;
+    };
+    msgType = "-1";//自定义，实验时根据这个清除锁屏的消息列表
+}
+
+
+
+
+配合方法
+
+- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult result))completionHandler{
+    NSLog(@"/*****application didReceiveRemoteNotification:  %@*****/",userInfo);
+    NSDictionary *apsInfo = [userInfo objectForKey:@"aps"];
+    //content-available 静默推送，1
+    NSNumber *contentAvailable = [apsInfo objectForKey:@"content-available"];
+    NSInteger msgType = [[userInfo objectForKey:@"msgType"] integerValue];
+    if (msgType == -1) {
+        //cancel message
+        [UIApplication sharedApplication].applicationIconBadgeNumber = 0;
+    }
+    completionHandler(UIBackgroundFetchResultNewData);
+}
+
+
+
+需要开启后台推送功能
